@@ -4,103 +4,72 @@ import 'package:intl/intl.dart';
 import 'package:todo_app_workshop_2021/models/database_helper.dart';
 import 'package:todo_app_workshop_2021/models/note.dart';
 
+const _priorities = ['High Priority', 'Low Priority'];
+
 class NoteDetail extends StatefulWidget {
   final String appParTitle;
-  final Note curNote;
-  NoteDetail(this.curNote, this.appParTitle);
+  final Note note;
+  final DatabaseHelper databaseHelper;
+  NoteDetail(this.note, this.appParTitle, this.databaseHelper);
   @override
-  _NoteDetailState createState() => _NoteDetailState(this.curNote, appParTitle);
+  _NoteDetailState createState() => _NoteDetailState();
 }
 
 class _NoteDetailState extends State<NoteDetail> {
-  Note curNote = new Note('', '', 1);
-  String appParTitle;
-  static var _priorities = ['Urgent', 'K'];
-  _NoteDetailState(this.curNote, this.appParTitle);
-
-  TextEditingController titleCon = new TextEditingController();
-  TextEditingController desCon = new TextEditingController();
-
-  DatabaseHelper helper = DatabaseHelper();
+  Note curNote;
+  TextEditingController titleController;
+  TextEditingController desController;
+  @override
+  void initState() {
+    super.initState();
+    curNote = widget.note;
+    titleController = TextEditingController(text: curNote.title);
+    desController = TextEditingController(text: curNote.description);
+  }
 
   @override
   Widget build(BuildContext context) {
-    TextStyle textStyle = Theme.of(context).textTheme.title;
-    titleCon.text = curNote.title;
-    desCon.text = curNote.description;
+    return Scaffold(
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+    );
+  }
 
-    return new Scaffold(
-      appBar: new AppBar(
-        title: new Text('$appParTitle'),
+  //WIDGETS
+  Widget _buildAppBar() => AppBar(
+        title: Text(widget.appParTitle),
         backgroundColor: Colors.redAccent,
-        actions: <Widget>[
-          new IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: () {
-                print('delete the note');
-                deleteNote();
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () async => await _saveNote(),
+        ),
+        actions: [
+          DropdownButton(
+              items: _priorities
+                  .map((String dropDownStringItem) => DropdownMenuItem<String>(
+                        value: dropDownStringItem,
+                        child: Text(dropDownStringItem),
+                      ))
+                  .toList(),
+              value: getPriorityAsString(curNote.priority),
+              onChanged: (valueSelectedByUser) {
+                setState(() {
+                  curNote.priority = getPriorityAsInt(valueSelectedByUser);
+                });
               }),
-          new IconButton(
-            icon: Icon(Icons.check),
-            onPressed: () {
-              print('save the note');
-              saveNote();
-            },
-          )
         ],
-      ),
+      );
 
-      // body: new CustomScrollView(
-      //   slivers: <Widget>[
-      //     new SliverAppBar(
-      //       actions: <Widget>[new Icon(Icons.add)],
-      //     )
-      //   ],
-      // ),
-      body: Padding(
+  Widget _buildBody() => Padding(
         padding: EdgeInsets.only(top: 15.0, left: 10.0, right: 10.0),
-        child: new ListView(
+        child: ListView(
           children: <Widget>[
-            Padding(
-              padding: EdgeInsets.only(left: 12.0),
-              child: new Text(
-                'How important is it?',
-                style: TextStyle(
-                    fontSize: 16.0,
-                    color: Colors.red,
-                    wordSpacing: 1.0,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            ListTile(
-              title: DropdownButton(
-                  items: _priorities.map((String dropDownStringItem) {
-                    return DropdownMenuItem<String>(
-                      value: dropDownStringItem,
-                      child: Text(dropDownStringItem),
-                    );
-                  }).toList(),
-                  style: textStyle,
-                  value: getPriorityAsString(curNote.priority),
-                  onChanged: (valueSelectedByUser) {
-                    setState(() {
-                      debugPrint('User selected $valueSelectedByUser');
-                      curNote.priority = getPriorityAsInt(valueSelectedByUser);
-                    });
-                  }),
-            ),
             Padding(
               padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
               child: TextField(
-                style: textStyle,
-                controller: titleCon,
-                onChanged: (the_title) {
-                  print('the title: $the_title');
-                  updateTitle();
-                },
+                controller: titleController,
                 decoration: InputDecoration(
-                    labelStyle: textStyle,
-                    labelText: 'Title it',
+                    labelText: 'Title',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(5.0))),
               ),
@@ -108,31 +77,23 @@ class _NoteDetailState extends State<NoteDetail> {
             Padding(
               padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
               child: TextField(
-                style: textStyle,
-                controller: desCon,
-                onChanged: (the_description) {
-                  print('the title: $the_description');
-                  updateDes();
-                },
+                controller: desController,
                 decoration: InputDecoration(
-                    labelStyle: textStyle,
-                    labelText: 'Descripe it',
+                    labelText: 'Description',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(5.0))),
               ),
             )
           ],
         ),
-      ),
-    );
-  }
+      );
 
   int getPriorityAsInt(String value) {
     switch (value) {
-      case 'Urgent':
+      case 'High Priority':
         return 1;
         break;
-      case 'K':
+      case 'Low Priority':
         return 2;
         break;
       default:
@@ -144,60 +105,36 @@ class _NoteDetailState extends State<NoteDetail> {
   String getPriorityAsString(int value) {
     switch (value) {
       case 1:
-        return 'Urgent';
+        return 'High Priority';
         break;
       case 2:
-        return 'K';
+        return 'Low Priority';
         break;
       default:
-        return 'Urgent';
+        return 'High Priority';
         break;
     }
   }
 
-  void updateTitle() => curNote.title = titleCon.text;
-  void updateDes() => curNote.description = desCon.text;
-
-  void saveNote() async {
-    Navigator.pop(context, true);
+  Future<void> _saveNote() async {
+    curNote.title = titleController.text;
+    curNote.description = desController.text;
+    if ((curNote.title.isEmpty && curNote.description.isEmpty)) {
+      Navigator.pop(context);
+      return;
+    }
     curNote.date = DateFormat.yMMMd().format(DateTime.now());
-    int result;
-    if (curNote.id != null) {
-      //that's a new note we will insert
-      result = await helper.updateNote(curNote);
-    } else {
-      //that's an update
-      //Note n=new Note('titile',1,'myDate','des');
-      result = await helper.insertNote(curNote);
-    }
 
-    print(curNote.id);
-    if (result == 1) {
-      showAlertDialog('Status', 'Note saved succussfuly');
-    } else if (result == 0) {
-      showAlertDialog('Status', 'Problem saving Note');
-    }
-  }
+    int result = curNote.id != null
+        ? await widget.databaseHelper.updateNote(curNote)
+        : await widget.databaseHelper.insertNote(curNote);
 
-  void deleteNote() async {
-    int result;
-    if (curNote.id == null) {
-      //that's a new note we will insert
-      showAlertDialog('Status', 'WTH');
-    } else {
-      //that's an update
-      result = await helper.deleteNote(curNote.id);
-    }
-
-    if (result == 1) {
-      showAlertDialog('Status', 'Note deleted succussfuly');
+    if (result >= 0) {
       Navigator.pop(context, true);
-      print('$result');
     } else {
-      showAlertDialog('Status', 'Problem deleting Note');
-      print('not done');
+      Navigator.pop(context, false);
+      showAlertDialog('Status', 'Error saving note!');
     }
-    Navigator.pop(context, true);
   }
 
   showAlertDialog(String titile, String message) {
@@ -206,13 +143,5 @@ class _NoteDetailState extends State<NoteDetail> {
       content: Text(message),
     );
     showDialog(context: context, builder: (_) => alertDialog);
-  }
-
-  void _showSnackBar(BuildContext context, String theMessage) {
-    final snackBar = SnackBar(
-      content: Text(theMessage),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    // Scaffold.of(context).showBottomSheet(builder);
   }
 }
