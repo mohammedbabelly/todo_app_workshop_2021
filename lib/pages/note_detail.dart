@@ -212,7 +212,7 @@ class _NoteDetailState extends State<NoteDetail> {
     final snackBar = SnackBar(
       content: Text(theMessage),
     );
-    Scaffold.of(context).showSnackBar(snackBar);
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
     // Scaffold.of(context).showBottomSheet(builder);
   }
 }

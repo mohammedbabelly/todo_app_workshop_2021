@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:todo_app_workshop_2021/models/database_helper.dart';
 import 'package:todo_app_workshop_2021/models/note.dart';
 import 'package:todo_app_workshop_2021/pages/note_detail.dart';
@@ -12,117 +11,92 @@ class NotesPage extends StatefulWidget {
 
 class _NotesPageState extends State<NotesPage> {
   DatabaseHelper _databaseHelper;
-  List<Note> noteList;
-  int cnt = 0;
-
+  GlobalKey<RefreshIndicatorState> refreshKey =
+      GlobalKey<RefreshIndicatorState>();
   @override
   void initState() {
     super.initState();
     _databaseHelper = new DatabaseHelper();
+    _databaseHelper.initializeDatabase();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (NotesPage == null) {
-      noteList = [];
-    } else
-      updateListView();
-    return new Scaffold(
-      appBar: new AppBar(
-        title: new Text('stuff TODO today'),
-        backgroundColor: Colors.redAccent,
-      ),
-      body: getNoteListView(),
+    return Scaffold(
+      appBar: _buildAppBar(),
+      body: _buildBody(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          var result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      NoteDetail(Note('', '', 2), "add a new note")));
-          if (result == true && result != null) updateListView();
-        },
+        onPressed: () async => await _goToNextPage(),
         backgroundColor: Colors.redAccent,
-        child: new Icon(Icons.add),
+        child: Icon(Icons.add),
       ),
     );
   }
 
-  ListView getNoteListView() {
-    TextStyle titleStyle = Theme.of(context).textTheme.subhead;
-    // print('cnt= $cnt');
-    if (cnt == 0)
-      return ListView.builder(
-        itemCount: 1,
-        itemBuilder: (BuildContext context, int pos) {
-          var height =
-              MediaQuery.of(context).size.height; //get the screen height
-          return new Center(
-              child: Padding(
-            padding: new EdgeInsets.only(
-                top: height / 2), //padding the half of the screen
-            child: Text(
-              'Tap + to add a new note',
-              style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold),
-            ),
-          ));
-        },
+  //WIDGETS
+  Widget _buildAppBar() => AppBar(
+        title: Text('Things Todo today'),
+        centerTitle: true,
+        backgroundColor: Colors.redAccent,
       );
-    else
-      return ListView.builder(
-        itemCount: cnt,
-        itemBuilder: (BuildContext context, int pos) {
-          return new Card(
-            color: Colors.white,
-            elevation: 2.0,
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: getPriorityColor(this.noteList[pos].priority),
-                child: getPriorityIcon(this.noteList[pos].priority),
-              ),
-              title: Text(
-                this.noteList[pos].title,
-                style: titleStyle,
-              ),
-              subtitle: Text(this.noteList[pos].date),
-              trailing: InkWell(
-                  child: Icon(Icons.delete, color: Colors.red),
-                  onTap: () {
-                    deleteNote(context, noteList[pos].id);
-                  }),
-              onTap: () async {
-                //tap to edit the note
-                var result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            NoteDetail(this.noteList[pos], 'edit your note')));
-                if (result == true && result != null) updateListView();
-              },
-            ),
-          );
-        },
-      );
+
+  Widget _buildBody() {
+    return FutureBuilder(
+        future: _getNotesFromDb(),
+        builder: (BuildContext context, snapshot) {
+          return snapshot.connectionState == ConnectionState.waiting
+              ? Center(child: CircularProgressIndicator())
+              : snapshot.hasError
+                  ? Center(
+                      child: Text(
+                        snapshot.error.toString(),
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    )
+                  : snapshot.data.isNotEmpty
+                      ? RefreshIndicator(
+                          key: refreshKey,
+                          onRefresh: onRefs,
+                          child: ListView.builder(
+                            itemCount: snapshot.data.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return _buildNoteCard(snapshot.data[index]);
+                            },
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            'Tap + to add a new note',
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        );
+        });
   }
 
-  deleteNote(BuildContext context, int id) async {
-    int result = await _databaseHelper.deleteNote(id);
-    if (result != 0) {
-      //deleted
-      _showSnackBar(context, "Note deleted successfuly");
-      updateListView();
-    }
-  }
+  Widget _buildNoteCard(Note note) => Card(
+        color: Colors.white,
+        elevation: 2.0,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: getPriorityColor(note.priority),
+            child: getPriorityIcon(note.priority),
+          ),
+          title: Text(
+            note.title,
+          ),
+          subtitle: Text(note.date),
+          trailing: InkWell(
+              child: Icon(Icons.delete, color: Colors.red),
+              onTap: () async => await _deleteNote(context, note.id)),
+          onTap: () async => _goToNextPage(note),
+        ),
+      );
 
   void _showSnackBar(BuildContext context, String theMessage) {
     final snackBar = SnackBar(
       content: Text(theMessage),
     );
-    Scaffold.of(context).showSnackBar(snackBar);
-    // Scaffold.of(context).showBottomSheet(builder);
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Color getPriorityColor(int pro) {
@@ -165,16 +139,31 @@ class _NotesPageState extends State<NotesPage> {
     }
   }
 
-  void updateListView() {
-    final Future<Database> dbFuture = _databaseHelper.initializeDatabase();
-    dbFuture.then((database) {
-      Future<List<Note>> noteListFuture = _databaseHelper.getNoteList();
-      noteListFuture.then((noteList1) {
-        setState(() {
-          this.noteList = noteList1;
-          this.cnt = noteList1.length;
-        });
+  Future<List<Note>> _getNotesFromDb() async =>
+      await _databaseHelper.getAllNotes();
+
+  Future<void> _deleteNote(BuildContext context, int id) async {
+    int result = await _databaseHelper.deleteNote(id);
+    if (result != 0)
+      setState(() {
+        _showSnackBar(context, "Note deleted successfuly");
       });
-    });
+    else
+      _showSnackBar(context, "Could't delete!");
   }
+
+  Future<void> _goToNextPage([Note note]) async {
+    var result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => note == null
+                ? NoteDetail(Note('', '', 2), 'Add a new note')
+                : NoteDetail(note, 'Edit your note')));
+    if (result != null && result)
+      setState(() {});
+    else
+      _showSnackBar(context, "Something went wrong!");
+  }
+
+  Future<Null> onRefs() async => setState(() {});
 }

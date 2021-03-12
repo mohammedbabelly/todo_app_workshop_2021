@@ -49,7 +49,7 @@ class Note {
       map['id'] = _id;
     }
     map['title'] = _title;
-    map['description'] = _description;
+    map['des'] = _description;
     map['priority'] = _priority;
     map['date'] = _date;
 
@@ -60,7 +60,7 @@ class Note {
   Note.fromMapObject(Map<String, dynamic> map) {
     this._id = map['id'];
     this._title = map['title'];
-    this._description = map['description'];
+    this._description = map['des'];
     this._priority = map['priority'];
     this._date = map['date'];
   }
