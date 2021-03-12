@@ -13,18 +13,7 @@ const String colPriority = 'priority';
 const String colDate = 'date';
 
 class DatabaseHelper {
-  // static DatabaseHelper _databaseHelper; // Singleton DatabaseHelper
-  static Database _database; // Singleton Database
-
-  // DatabaseHelper._createInstance(); // Named constructor to create instance of DatabaseHelper
-
-  // factory DatabaseHelper() {
-  //   if (_databaseHelper == null) {
-  //     _databaseHelper = DatabaseHelper
-  //         ._createInstance(); // This is executed only once, singleton object
-  //   }
-  //   return _databaseHelper;
-  // }
+  static Database _database;
 
   Future<Database> get database async =>
       _database = _database ?? await initializeDatabase();

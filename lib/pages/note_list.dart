@@ -27,7 +27,6 @@ class _NotesPageState extends State<NotesPage> {
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: () async => await _goToNextPage(),
-        backgroundColor: Colors.redAccent,
         child: Icon(Icons.add),
       ),
     );
@@ -37,7 +36,6 @@ class _NotesPageState extends State<NotesPage> {
   Widget _buildAppBar() => AppBar(
         title: Text('Things Todo today'),
         centerTitle: true,
-        backgroundColor: Colors.redAccent,
       );
 
   Widget _buildBody() {
@@ -73,7 +71,6 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Widget _buildNoteCard(Note note) => Card(
-        color: Colors.white,
         elevation: 2.0,
         child: ListTile(
           leading: CircleAvatar(
@@ -93,12 +90,12 @@ class _NotesPageState extends State<NotesPage> {
 
   void _showSnackBar(BuildContext context, String theMessage, bool succsess) {
     final snackBar = SnackBar(
-      content: ListTile(
-          title: Text(theMessage, style: TextStyle(color: Colors.white24)),
-          leading: succsess
-              ? Icon(Icons.check, color: Colors.green)
-              : Icon(Icons.close, color: Colors.red)),
-    );
+        content: ListTile(
+            title: Text(theMessage),
+            leading: succsess
+                ? Icon(Icons.check, color: Colors.green)
+                : Icon(Icons.close, color: Colors.red)),
+        backgroundColor: Color(0xff222222));
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
@@ -108,7 +105,6 @@ class _NotesPageState extends State<NotesPage> {
     switch (pro) {
       case 1:
         return Colors.red;
-
       case 2:
         return Colors.greenAccent;
       default:
@@ -117,9 +113,8 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Icon getPriorityIcon(int pro) {
-    //1 means hight
-    //2 means medium
-    //3 means low
+    //1 means High
+    //2 means Low
     switch (pro) {
       case 1:
         return Icon(

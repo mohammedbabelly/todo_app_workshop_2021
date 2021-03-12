@@ -5,4 +5,5 @@ void main() => runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'TODO stuff',
       home: NotesPage(),
+      theme: ThemeData.dark(),
     ));

@@ -38,7 +38,6 @@ class _NoteDetailState extends State<NoteDetail> {
   //WIDGETS
   Widget _buildAppBar() => AppBar(
         title: Text(widget.appParTitle),
-        backgroundColor: Colors.redAccent,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () async => await _saveNote(),
@@ -68,6 +67,7 @@ class _NoteDetailState extends State<NoteDetail> {
               padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
               child: TextField(
                 controller: titleController,
+                cursorColor: Colors.white60,
                 decoration: InputDecoration(
                     labelText: 'Title',
                     border: OutlineInputBorder(
@@ -78,6 +78,7 @@ class _NoteDetailState extends State<NoteDetail> {
               padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
               child: TextField(
                 controller: desController,
+                cursorColor: Colors.white60,
                 decoration: InputDecoration(
                     labelText: 'Description',
                     border: OutlineInputBorder(
