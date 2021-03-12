@@ -41,36 +41,35 @@ class _NotesPageState extends State<NotesPage> {
       );
 
   Widget _buildBody() {
-    return FutureBuilder(
-        future: _getNotesFromDb(),
-        builder: (BuildContext context, snapshot) {
-          return snapshot.connectionState == ConnectionState.waiting
-              ? Center(child: CircularProgressIndicator())
-              : snapshot.hasError
-                  ? Center(
-                      child: Text(
-                        snapshot.error.toString(),
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                    )
-                  : snapshot.data.isNotEmpty
-                      ? RefreshIndicator(
-                          key: refreshKey,
-                          onRefresh: onRefs,
-                          child: ListView.builder(
-                            itemCount: snapshot.data.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              return _buildNoteCard(snapshot.data[index]);
-                            },
-                          ),
-                        )
-                      : Center(
+    return RefreshIndicator(
+        key: refreshKey,
+        onRefresh: onRefs,
+        child: FutureBuilder(
+            future: _getNotesFromDb(),
+            builder: (BuildContext context, snapshot) {
+              return snapshot.connectionState == ConnectionState.waiting
+                  ? Center(child: CircularProgressIndicator())
+                  : snapshot.hasError
+                      ? Center(
                           child: Text(
-                            'Tap + to add a new note',
+                            snapshot.error.toString(),
                             style: TextStyle(color: Colors.black54),
                           ),
-                        );
-        });
+                        )
+                      : snapshot.data.isNotEmpty
+                          ? ListView.builder(
+                              itemCount: snapshot.data.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                return _buildNoteCard(snapshot.data[index]);
+                              },
+                            )
+                          : Center(
+                              child: Text(
+                                'Tap + to add a new note',
+                                style: TextStyle(color: Colors.black54),
+                              ),
+                            );
+            }));
   }
 
   Widget _buildNoteCard(Note note) => Card(
@@ -92,50 +91,53 @@ class _NotesPageState extends State<NotesPage> {
         ),
       );
 
-  void _showSnackBar(BuildContext context, String theMessage) {
+  void _showSnackBar(BuildContext context, String theMessage, bool succsess) {
     final snackBar = SnackBar(
-      content: Text(theMessage),
+      content: ListTile(
+          title: Text(theMessage, style: TextStyle(color: Colors.white24)),
+          leading: succsess
+              ? Icon(Icons.check, color: Colors.green)
+              : Icon(Icons.close, color: Colors.red)),
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   Color getPriorityColor(int pro) {
-    //1 means urgent
-    //2 means not important
+    //1 means High
+    //2 means Low
     switch (pro) {
       case 1:
         return Colors.red;
-        break;
+
       case 2:
         return Colors.greenAccent;
-        break;
       default:
         return Colors.red;
     }
   }
 
   Icon getPriorityIcon(int pro) {
-    //1 means urgent
-    //2 means not important
+    //1 means hight
+    //2 means medium
+    //3 means low
     switch (pro) {
       case 1:
         return Icon(
           Icons.directions_run,
           color: Colors.white,
         );
-        break;
+
       case 2:
         return Icon(
           Icons.directions_walk,
           color: Colors.white,
         );
-        break;
+
       default:
         return Icon(
-          Icons.directions_run,
+          Icons.error,
           color: Colors.white,
         );
-        break;
     }
   }
 
@@ -146,23 +148,28 @@ class _NotesPageState extends State<NotesPage> {
     int result = await _databaseHelper.deleteNote(id);
     if (result != 0)
       setState(() {
-        _showSnackBar(context, "Note deleted successfuly");
+        _showSnackBar(context, "Note deleted successfuly", true);
       });
     else
-      _showSnackBar(context, "Could't delete!");
+      _showSnackBar(context, "Could't delete!", false);
   }
 
   Future<void> _goToNextPage([Note note]) async {
-    var result = await Navigator.push(
+    bool result = await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => note == null
-                ? NoteDetail(Note('', '', 2), 'Add a new note')
-                : NoteDetail(note, 'Edit your note')));
+                ? NoteDetail(Note('', '', 2), 'Add a new note', _databaseHelper)
+                : NoteDetail(note, 'Edit your note', _databaseHelper)));
     if (result != null && result)
-      setState(() {});
-    else
-      _showSnackBar(context, "Something went wrong!");
+      setState(() {
+        _showSnackBar(
+            context,
+            note == null
+                ? "Note created successfuly"
+                : "Note updated successfuly",
+            true);
+      });
   }
 
   Future<Null> onRefs() async => setState(() {});
